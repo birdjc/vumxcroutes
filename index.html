@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VUMXC Routes</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <link rel="icon" type="image/x-icon" href="images/vanderbilt_anchor.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .splash-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            }
+
+        .splash-content {
+            background: white;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .splash-content h2 {
+            margin-bottom: 8px;
+        }
+
+        .splash-logo {
+            width: 60px;
+            margin-bottom: 20px;
+        }
+
+        .splash-button {
+            background: #CFAE70;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        .splash-button:hover {
+            background: #B49248;
+        }
+
+        .sidebar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 380px;
+            max-height: calc(100vh - 40px);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px 8px 0 0;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-header p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .dark-mode-toggle {
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            width: fit-content;
+        }
+
+        .dark-mode-toggle:hover {
+            background: #e0e0e0;
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .filters-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .filter-select {
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 12px;
+            background: white;
+            min-width: 100px;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .route-count {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .routes-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 10px 10px 10px;
+        }
+
+        .route-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            padding: 12px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .route-item:hover {
+            background: #f8f9fa;
+            border-color: #007bff;
+        }
+
+        .route-item.selected {
+            background: #e3f2fd;
+            border-color: #007bff;
+        }
+
+        .route-item.hidden {
+            display: none;
+        }
+
+        .route-checkbox {
+            appearance: none;
+            background-color: #eee;
+            margin-right: 10px;
+            font: inherit;
+            color: #666;
+            width: 1.15em;
+            height: 1.15em;
+            border: 0.05em solid currentColor;
+            border-radius: 2em;
+            transform: translateY(-0.075em);
+            display: grid;
+            place-content: center;
+        }
+
+        .route-checkbox::before {
+           content: "";
+            width: 0.65em;
+            height: 0.65em;
+            border-radius: 2em;
+            opacity: 0.8;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em var(--form-control-color); 
+        }
+
+        .route-checkbox:checked::before {
+            transform: scale(1);
+            background-color:#007bff;
+        }
+
+        .route-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .route-details {
+            font-size: 12px;
+            color: #666;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .route-detail-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .difficulty-badge {
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+            color: white;
+        }
+
+        .difficulty-easy {
+            background-color: #28a745;
+        }
+
+        .difficulty-moderate {
+            background-color: #ffc107;
+            color: #333;
+        }
+
+        .difficulty-hard {
+            background-color: #dc3545;
+        }
+
+        .route-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+            margin-top: 8px;
+        }
+
+        /* Custom scrollbar */
+        .routes-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .routes-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .routes-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .routes-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Dark mode styles */
+        body.dark-mode {
+            background-color: #1a1a1a;
+        }
+
+        .dark-mode .sidebar {
+            background: rgba(40, 40, 40, 0.95);
+            border: 1px solid rgba(80, 80, 80, 0.3);
+        }
+
+        .dark-mode .sidebar-header {
+            background: rgba(50, 50, 50, 0.9);
+            border-bottom: 1px solid #444;
+        }
+
+        .dark-mode .sidebar-header h2 {
+            color: #fff;
+        }
+
+        .dark-mode .sidebar-header p {
+            color: #ccc;
+        }
+
+        .dark-mode .dark-mode-toggle {
+            background: #555;
+            border: 1px solid #666;
+            color: #fff;
+        }
+
+        .dark-mode .dark-mode-toggle:hover {
+            background: #666;
+        }
+
+        .dark-mode .search-bar {
+            background: #444;
+            border: 1px solid #555;
+            color: #fff;
+        }
+
+        .dark-mode .search-bar:focus {
+            border-color: #007bff;
+        }
+
+        .dark-mode .filter-group label {
+            color: #ccc;
+        }
+
+        .dark-mode .filter-select {
+            background: #444;
+            border: 1px solid #555;
+            color: #fff;
+        }
+
+        .dark-mode .filter-select:focus {
+            border-color: #007bff;
+        }
+
+        .dark-mode .route-count {
+            color: #ccc;
+        }
+
+        .dark-mode .route-item {
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+        }
+
+        .dark-mode .route-item:hover {
+            background: #404040;
+            border-color: #007bff;
+        }
+
+        .dark-mode .route-item.selected {
+            background: #1a365d;
+            border-color: #007bff;
+        }
+
+        .dark-mode .route-title {
+            color: #fff;
+        }
+
+        .dark-mode .route-details {
+            color: #ccc;
+        }
+
+        .dark-mode .routes-container::-webkit-scrollbar-track {
+            background: #444;
+        }
+
+        .dark-mode .routes-container::-webkit-scrollbar-thumb {
+            background: #666;
+        }
+
+        .dark-mode .routes-container::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+
+        .gpx-download {
+            font-size: 12px;
+            color: #007bff;
+            text-decoration: none;
+            padding: 2px 8px;
+            border: 1px solid #007bff;
+            border-radius: 12px;
+            
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .gpx-download:hover {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .map-info {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #333;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <!-- Splash Modal -->
+    <div id="splashOverlay" class="splash-overlay">
+    <div class="splash-content">
+        <img src="images/vanderbilt_anchor.png" alt="Vanderbilt Anchor" class="splash-logo">
+        <h2>Welcome to VUMXC Routes</h2>
+        <p>"We're Commodores, we're sailors. And we don't jump ship."</p>
+        <button id="dismissSplash" class="splash-button"></button>
+    </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>VUMXC Routes</h2>
+            <p>Select routes to display on the map</p>
+            <div class="controls-row">
+                <button class="dark-mode-toggle" id="darkModeToggle">
+                    <span id="darkModeIcon">🌙</span>
+                    <span id="darkModeText">Dark</span>
+                </button>
+                <button class="dark-mode-toggle" id="toggleAllRoutes">
+                    <span id="toggleAllIcon">➕</span>
+                    <span id="toggleAllText">Show All</span>
+                </button>
+            </div>
+            
+            <input type="text" class="search-bar" id="searchBar" placeholder="Search routes by name...">
+            
+            <div class="filters-container">
+                <div class="filter-group">
+                    <label for="difficultyFilter">Difficulty</label>
+                    <select class="filter-select" id="difficultyFilter">
+                        <option value="">All</option>
+                        <option value="easy">Easy</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="distanceFilter">Distance</label>
+                    <select class="filter-select" id="distanceFilter">
+                        <option value="">All</option>
+                        <option value="0-5">0-5 miles</option>
+                        <option value="5-10">5-10 miles</option>
+                        <option value="10+">10+ miles</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="elevationFilter">Elevation</label>
+                    <select class="filter-select" id="elevationFilter">
+                        <option value="">All</option>
+                        <option value="0-500">0-500 ft</option>
+                        <option value="500-1000">500-1000 ft</option>
+                        <option value="1000+">1000+ ft</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="route-count" id="routeCount">Loading routes...</div>
+        </div>
+        
+        <div class="routes-container" id="routesContainer">
+            <!-- Routes will be populated here -->
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        // Route configuration - add your GeoJSON files here
+        // Insert GeoJSON folder path here
+        const routeConfig = [
+            {
+                id: 1,
+                geojsonFile: "routes/Al_Gore.geojson",
+                color: "#e6194b"
+            },
+            {
+                id: 2,
+                geojsonFile: "routes/Ashland_City.geojson",
+                color: "#3cb44b"
+            },
+            {
+                id: 3,
+                geojsonFile: "routes/Battlefield.geojson",
+                color: "#ffe119"
+            },
+            {
+                id: 4,
+                geojsonFile: "routes/Belle_Meade_Boulevard.geojson",
+                color: "#4363d8"
+            },
+            {
+                id: 5,
+                geojsonFile: "routes/Bro_Run.geojson",
+                color: "#f58231"
+            },
+            {
+                id: 6,
+                geojsonFile: "routes/Campus_Loop.geojson",
+                color: "#911eb4"
+            },
+            {
+                id: 7,
+                geojsonFile: "routes/Civil_War.geojson",
+                color: "#46f0f0"
+            },
+            {
+                id: 8,
+                geojsonFile: "routes/Commodore_Classic.geojson",
+                color: "#f032e6"
+            },
+            {
+                id: 9,
+                geojsonFile: "routes/Cumberland_River_Trail.geojson",
+                color: "#bcf60c"
+            },
+            {
+                id: 10,
+                geojsonFile: "routes/Dam_to_Campus.geojson",
+                color: "#ff3366"
+            },
+            {
+                id: 11,
+                geojsonFile: "routes/Dorns.geojson",
+                color: "#008080"
+            },
+            {
+                id: 12,
+                geojsonFile: "routes/Dorns_Course.geojson",
+                color: "#e6beff"
+            },
+            {
+                id: 13,
+                geojsonFile: "routes/Exercising_On_Post.geojson",
+                color: "#9a6324"
+            },
+            {
+                id: 14,
+                geojsonFile: "routes/Fairgrounds_21st_Return.geojson",
+                color: "#fffac8"
+            },
+            {
+                id: 15,
+                geojsonFile: "routes/Fairgrounds_Fort_Negs.geojson",
+                color: "#ff3300"
+            },
+            {
+                id: 16,
+                geojsonFile: "routes/Fairgrounds_West_End_Return.geojson",
+                color: "#aaffc3"
+            },
+            {
+                id: 17,
+                geojsonFile: "routes/FourForty.geojson",
+                color: "#808000"
+            },
+            {
+                id: 18,
+                geojsonFile: "routes/Frank.geojson",
+                color: "#ffd8b1"
+            },
+            {
+                id: 19,
+                geojsonFile: "routes/Germantown.geojson",
+                color: "#000075"
+            },
+            {
+                id: 20,
+                geojsonFile: "routes/Granny_White.geojson",
+                color: "#33cc33"
+            },
+            {
+                id: 21,
+                geojsonFile: "routes/Gulch_21st_Return.geojson",
+                color: "#ff4500"
+            },
+            {
+                id: 22,
+                geojsonFile: "routes/Gulch_West_End_Return.geojson",
+                color: "#1e90ff"
+            },
+            {
+                id: 23,
+                geojsonFile: "routes/Hachi_Machi.geojson",
+                color: "#00ced1"
+            },
+            {
+                id: 24,
+                geojsonFile: "routes/Harpeth_River_Greenway.geojson",
+                color: "#7cfc00"
+            },
+            {
+                id: 25,
+                geojsonFile: "routes/Harrisons_Birthday.geojson",
+                color: "#da70d6"
+            },
+            {
+                id: 26,
+                geojsonFile: "routes/Kroger.geojson",
+                color: "#ff69b4"
+            },
+            {
+                id: 27,
+                geojsonFile: "routes/Lipscomb.geojson",
+                color: "#20b2aa"
+            },
+            {
+                id: 28,
+                geojsonFile: "routes/Lipscomb_8th_Ave_Return.geojson",
+                color: "#ff1493"
+            },
+            {
+                id: 29,
+                geojsonFile: "routes/Lipscomb_Dorns.geojson",
+                color: "#adff2f"
+            },
+            {
+                id: 30,
+                geojsonFile: "routes/Lipscomb_Hoods.geojson",
+                color: "#7b68ee"
+            },
+            {
+                id: 31,
+                geojsonFile: "routes/McCabe.geojson",
+                color: "#40e0d0"
+            },
+            {
+                id: 32,
+                geojsonFile: "routes/McCabe_Nick_French_Return.geojson",
+                color: "#ba55d3"
+            },
+            {
+                id: 33,
+                geojsonFile: "routes/Music_Row_21st_Return.geojson",
+                color: "#ff6347"
+            },
+            {
+                id: 34,
+                geojsonFile: "routes/Music_Row_West_End_Return.geojson",
+                color: "#00fa9a"
+            },
+            {
+                id: 35,
+                geojsonFile: "routes/Natchez.geojson",
+                color: "#00bfff"
+            },
+            {
+                id: 36,
+                geojsonFile: "routes/Short_Battlefield.geojson",
+                color: "#9932cc"
+            },
+            {
+                id: 37,
+                geojsonFile: "routes/Short_Hoods.geojson",
+                color: "#ff00ff"
+            },
+            {
+                id: 38,
+                geojsonFile: "routes/Slob_On_Me_Knob.geojson",
+                color: "#ff8c00"
+            },
+            {
+                id: 39,
+                geojsonFile: "routes/Smeltz_Loop.geojson",
+                color: "#00ff7f"
+            },
+            {
+                id: 40,
+                geojsonFile: "routes/Sports_Run.geojson",
+                color: "#9933ff"
+            },
+            {
+                id: 41,
+                geojsonFile: "routes/The_58.geojson",
+                color: "#6a5acd"
+            },
+            {
+                id: 42,
+                geojsonFile: "routes/The_112.geojson",
+                color: "#00ff00"
+            },
+            {
+                id: 43,
+                geojsonFile: "routes/Twelve_South.geojson",
+                color: "#ffdab9"
+            },
+            {
+                id: 44,
+                geojsonFile: "routes/Zoo_Run.geojson",
+                color: "#add8e6"
+            }
+        ];
+
+        // Store loaded route data
+        let routeData = [];
+        let filteredRoutes = [];
+
+        // Get GPX route files
+        function getBaseName(filePath) {
+            return filePath.split('/').pop().replace('.geojson', '');
+        }
+        
+        // Basemap options with light/dark variants
+        const basemapOptions = {
+            light: {
+                cartoLight: {
+                    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                    attribution: '© OpenStreetMap contributors © CARTO'
+                }
+            },
+            dark: {
+                cartoDark: {
+                    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                    attribution: '© OpenStreetMap contributors © CARTO'
+                }
+            }
+        };
+
+        // Default basemap selections
+        const defaultBasemaps = {
+            light: 'cartoLight',
+            dark: 'cartoDark'
+        };
+
+        // Current theme state
+        let isDarkMode = false;
+        let currentTileLayer = null;
+
+        // Initialize map
+        const map = L.map('map', {
+            center: [36.12391, -86.92419],
+            zoom: 11,
+            minZoom: 11,
+            zoomControl: false
+        });
+
+        L.control.zoom({
+            position: 'topright'
+        }).addTo(map);
+
+        map.setMaxBounds(map.getBounds());
+
+        /*Function for Current Zoom/Coordinates
+        const infoDiv = L.control({ position: 'topright' });
+
+        infoDiv.onAdd = function () {
+            this._div = L.DomUtil.create('div', 'map-info');
+            this.update();
+            return this._div;
+        };
+
+        infoDiv.update = function () {
+            const center = map.getCenter();
+            const zoom = map.getZoom();
+            this._div.innerHTML = `<strong>Zoom:</strong> ${zoom}<br><strong>Center:</strong> [${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}]`;
+        };
+
+        infoDiv.addTo(map);
+
+        map.on('moveend zoomend', () => infoDiv.update());*/
+
+        // Store active route layers
+        const activeRoutes = new Map();
+
+        // Function to switch basemap
+        function switchBasemap(theme) {
+            const basemapKey = defaultBasemaps[theme];
+            const basemapConfig = basemapOptions[theme][basemapKey];
+            
+            if (currentTileLayer) {
+                map.removeLayer(currentTileLayer);
+            }
+            
+            currentTileLayer = L.tileLayer(basemapConfig.url, {
+                attribution: basemapConfig.attribution,
+                minZoom: 10
+            }).addTo(map);
+        }
+
+        // Function to toggle dark mode
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            const body = document.body;
+            const darkModeIcon = document.getElementById('darkModeIcon');
+            const darkModeText = document.getElementById('darkModeText');
+            
+            if (isDarkMode) {
+                body.classList.add('dark-mode');
+                darkModeIcon.textContent = '☀️';
+                darkModeText.textContent = 'Light';
+                switchBasemap('dark');
+            } else {
+                body.classList.remove('dark-mode');
+                darkModeIcon.textContent = '🌙';
+                darkModeText.textContent = 'Dark';
+                switchBasemap('light');
+            }
+        }
+
+        // Function to add/remove all routes
+        let allRoutesVisible = false;   // track current state
+
+        function showAllFilteredRoutes() {
+            const visiblePolylines = [];
+
+            filteredRoutes.forEach(route => {
+                if (!activeRoutes.has(route.id)) {
+                addRouteToMap(route);
+
+                // Tick checkbox and style the item
+                document.querySelector(`.route-checkbox[data-route-id="${route.id}"]`).checked = true;
+                document.querySelector(`.route-item[data-route-id="${route.id}"]`)
+                        .classList.add('selected');
+                }
+
+                // Grab the route's polyline (already added to map)
+                const polyline = activeRoutes.get(route.id);
+                if (polyline) visiblePolylines.push(polyline);
+            });
+
+            // Fit bounds to all visible polylines
+            if (visiblePolylines.length > 0) {
+                const group = new L.featureGroup(visiblePolylines);
+                map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            }
+        }
+
+            function hideAllRoutes() {
+            [...activeRoutes.keys()].forEach(removeRouteFromMap);
+            document.querySelectorAll('.route-checkbox').forEach(cb => (cb.checked = false));
+            document.querySelectorAll('.route-item').forEach(item => item.classList.remove('selected'));
+            }
+
+            /* Toggle handler */
+            function toggleAllRoutes() {
+            if (allRoutesVisible) {
+                hideAllRoutes();
+                allRoutesVisible = false;
+                document.getElementById('toggleAllIcon').textContent = '➕';
+                document.getElementById('toggleAllText').textContent = 'Show All';
+            } else {
+                showAllFilteredRoutes();  // adds only those that pass current filters
+                allRoutesVisible = true;
+                document.getElementById('toggleAllIcon').textContent = '➖';
+                document.getElementById('toggleAllText').textContent = 'Hide All';
+            }
+        }
+
+        // Initialize with light mode
+        switchBasemap('light');
+
+        // Function to load GeoJSON file and extract route data
+        async function loadGeoJSONRoute(routeConfig) {
+            try {
+                const response = await fetch(routeConfig.geojsonFile);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const geojsonData = await response.json();
+                
+                // Extract route name from properties
+                const routeName = geojsonData.properties?.Name || 
+                                 geojsonData.features?.[0]?.properties?.Name || 
+                                 `Route ${routeConfig.id}`;
+                
+                // Extract coordinates from GeoJSON
+                let coordinates = [];
+                if (geojsonData.type === 'Feature' && geojsonData.geometry) {
+                    coordinates = extractCoordinates(geojsonData.geometry);
+                } else if (geojsonData.type === 'FeatureCollection' && geojsonData.features) {
+                    // Take the first feature's coordinates
+                    coordinates = extractCoordinates(geojsonData.features[0].geometry);
+                }
+                
+                // Calculate metrics
+                const distance = calculateDistance(coordinates);
+                const elevationGain = calculateElevationGain(coordinates);
+                const difficulty = calculateDifficulty(distance, elevationGain);
+                
+                return {
+                    ...routeConfig,
+                    name: routeName,
+                    coordinates: coordinates,
+                    distance: distance,
+                    elevationGain: elevationGain,
+                    difficulty: difficulty,
+                    geojsonData: geojsonData,
+                    loaded: true
+                };
+            } catch (error) {
+                console.error(`Error loading GeoJSON file ${routeConfig.geojsonFile}:`, error);
+                return {
+                    ...routeConfig,
+                    name: `Route ${routeConfig.id}`,
+                    distance: 0,
+                    elevationGain: 0,
+                    difficulty: 'unknown',
+                    loaded: false,
+                    error: error.message
+                };
+            }
+        }
+
+        // Function to extract coordinates from GeoJSON geometry
+        function extractCoordinates(geometry) {
+            if (!geometry) return [];
+            
+            switch (geometry.type) {
+                case 'LineString':
+                    return geometry.coordinates.map(coord => [coord[1], coord[0], coord[2] || 0]);
+                case 'MultiLineString':
+                    return geometry.coordinates[0].map(coord => [coord[1], coord[0], coord[2] || 0]);
+                case 'Point':
+                    return [[geometry.coordinates[1], geometry.coordinates[0], geometry.coordinates[2] || 0]];
+                default:
+                    return [];
+            }
+        }
+
+        // Function to calculate distance in miles
+        function calculateDistance(coordinates) {
+            if (coordinates.length < 2) return 0;
+            
+            let totalDistance = 0;
+            for (let i = 1; i < coordinates.length; i++) {
+                const [lat1, lon1] = coordinates[i - 1];
+                const [lat2, lon2] = coordinates[i];
+                totalDistance += getDistanceBetweenPoints(lat1, lon1, lat2, lon2);
+            }
+            
+            return totalDistance * 0.000621371; // Convert meters to miles
+        }
+
+        // Function to calculate elevation gain in feet
+        function calculateElevationGain(coordinates) {
+            if (coordinates.length < 2) return 0;
+
+            let totalGain = 0;
+            let lastElevation = null;
+
+            for (let i = 0; i < coordinates.length; i++) {
+                const elevation = coordinates[i][2];
+                if (typeof elevation !== 'number') continue; // skip missing or invalid elevation
+
+                if (lastElevation !== null) {
+                    const delta = elevation - lastElevation;
+                    if (delta > 1) totalGain += delta; // ignore tiny bumps less than 1 meter
+                }
+
+                lastElevation = elevation;
+            }
+
+            return totalGain //* 3.28084; // Convert meters to feet
+        }
+
+
+        // Function to calculate difficulty based on elevation gain per mile
+        function calculateDifficulty(distanceMiles, elevationGainFeet) {
+            if (distanceMiles === 0) return 'unknown';
+            
+            const elevationPerMile = elevationGainFeet / distanceMiles;
+            
+            if (elevationPerMile < 55) return 'easy';
+            if (elevationPerMile < 85) return 'moderate';
+            return 'hard';
+        }
+
+        // Haversine formula for distance calculation
+        function getDistanceBetweenPoints(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // Earth's radius in meters
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Function to create route list item
+        function createRouteItem(route) {
+            const routeItem = document.createElement('div');
+            routeItem.className = 'route-item';
+            routeItem.dataset.routeId = route.id;
+            
+            const statusIndicator = route.loaded ? '' : '⚠️';
+            const distanceText = route.loaded ? `${route.distance.toFixed(1)} mi` : 'Failed to load';
+            const elevationText = route.loaded ? `${Math.round(route.elevationGain)} ft` : 'N/A';
+            
+            routeItem.innerHTML = `
+                <label>
+                    <input type="checkbox" class="route-checkbox" data-route-id="${route.id}" ${!route.loaded ? 'disabled' : ''}>
+                    <div class="route-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="display: flex; align-items: center; gap: 8px;">
+                            ${statusIndicator} ${route.name}
+                            <div class="route-color" style="background-color: ${route.color}; margin-top: 0;"></div>
+                        </span>
+                    </div>
+                    <div class="route-details">
+                        <div class="route-detail-item">
+                            <span>📏</span>
+                            <span>${distanceText}</span>
+                        </div>
+                        <div class="route-detail-item">
+                            <span>⛰️</span>
+                            <span>${elevationText}</span>
+                        </div>
+                        <div class="route-detail-item">
+                            <span>💪</span>
+                            <span class="difficulty-badge difficulty-${route.difficulty}">${route.difficulty}</span>
+                        </div>
+                    </div>
+                    <a href="gpx/${getBaseName(route.geojsonFile)}.gpx" download title="Download GPX"
+                        class="gpx-download">Download GPX</a>
+                </label>
+            `;
+            
+            if (!route.loaded) {
+                routeItem.style.opacity = '0.5';
+                routeItem.title = `Error: ${route.error}`;
+            }
+            
+            return routeItem;
+        }
+
+        // Function to add route to map
+        function addRouteToMap(route) {
+            if (!route.loaded || !route.coordinates || route.coordinates.length === 0) {
+                console.error('Route not loaded or has no coordinates:', route.name);
+                return;
+            }
+
+            const polyline = L.polyline(route.coordinates, {
+                color: route.color,
+                weight: 4,
+                opacity: 0.4
+            }).addTo(map);
+
+            // Add popup with route info
+            polyline.bindPopup(`
+                <strong>${route.name}</strong><br>
+                Distance: ${route.distance.toFixed(1)} miles<br>
+                Elevation Gain: ${Math.round(route.elevationGain)} feet<br>
+                Difficulty: <span class="difficulty-badge difficulty-${route.difficulty}">${route.difficulty}</span>
+            `);
+
+            activeRoutes.set(route.id, polyline);
+            
+            // Zoom to the specific route
+            map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+        }
+
+        // Function to remove route from map
+        function removeRouteFromMap(routeId) {
+            const polyline = activeRoutes.get(routeId);
+            if (polyline) {
+                map.removeLayer(polyline);
+                activeRoutes.delete(routeId);
+            }
+        }
+
+        // Function to handle route selection
+        function handleRouteSelection(event) {
+            const checkbox = event.target;
+            const routeId = parseInt(checkbox.dataset.routeId);
+            const route = routeData.find(r => r.id === routeId);
+            const routeItem = checkbox.closest('.route-item');
+
+            if (checkbox.checked) {
+                addRouteToMap(route);
+                routeItem.classList.add('selected');
+            } else {
+                removeRouteFromMap(routeId);
+                routeItem.classList.remove('selected');
+            }
+        }
+
+        // Function to filter routes
+        function filterRoutes() {
+            const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+            const difficultyFilter = document.getElementById('difficultyFilter').value;
+            const distanceFilter = document.getElementById('distanceFilter').value;
+            const elevationFilter = document.getElementById('elevationFilter').value;
+            
+            filteredRoutes = routeData.filter(route => {
+                // Search filter
+                if (searchTerm && !route.name.toLowerCase().includes(searchTerm)) {
+                    return false;
+                }
+                
+                // Difficulty filter
+                if (difficultyFilter && route.difficulty !== difficultyFilter) {
+                    return false;
+                }
+                
+                // Distance filter
+                if (distanceFilter) {
+                    const distance = route.distance;
+                    switch (distanceFilter) {
+                        case '0-5':
+                            if (distance > 5) return false;
+                            break;
+                        case '5-10':
+                            if (distance < 5 || distance > 10) return false;
+                            break;
+                        case '10+':
+                            if (distance < 10) return false;
+                            break;
+                    }
+                }
+                
+                // Elevation filter
+                if (elevationFilter) {
+                    const elevation = route.elevationGain;
+                    switch (elevationFilter) {
+                        case '0-500':
+                            if (elevation > 500) return false;
+                            break;
+                        case '500-1000':
+                            if (elevation < 500 || elevation > 1000) return false;
+                            break;
+                        case '1000+':
+                            if (elevation < 1000) return false;
+                            break;
+                    }
+                }
+
+                // reset the "all routes" toggle when filters change
+                allRoutesVisible = false;
+                document.getElementById('toggleAllIcon').textContent = '➕';
+                document.getElementById('toggleAllText').textContent = 'Show All';
+                
+                return true;
+            });
+            
+            updateRouteDisplay();
+        }
+
+        // Function to update route display
+        function updateRouteDisplay() {
+            const routeItems = document.querySelectorAll('.route-item');
+            routeItems.forEach(item => {
+                const routeId = parseInt(item.dataset.routeId);
+                const isVisible = filteredRoutes.some(route => route.id === routeId);
+                item.classList.toggle('hidden', !isVisible);
+            });
+            
+            // Update route count
+            document.getElementById('routeCount').textContent = 
+                `Showing ${filteredRoutes.length} of ${routeData.length} routes`;
+        }
+
+        // Home Point Layer
+        async function addHomePoint() {
+            const res = await fetch('routes/home.geojson');
+            const gj = await res.json();
+            const feature = gj.features[0];
+
+            const [lon, lat] = feature.geometry.coordinates;
+
+            // Create a Leaflet Icon using an image
+            const homeIcon = L.icon({
+                iconUrl: 'images/vanderbilt_anchor.png', // replace with your actual path
+                iconSize: [24, 24],              // size in pixels
+                iconAnchor: [12, 12],            // anchor point (centered)
+                className: 'home-icon'
+            });
+
+            const marker = L.marker([lat, lon], {
+                icon: homeIcon,
+                interactive: false // disables clicks, tooltips, etc.
+            }).addTo(map);
+
+            // Dynamically scale icon with zoom
+            map.on('zoomend', () => {
+                const zoom = map.getZoom();
+                const size = Math.round(Math.max(16, zoom * 2)); // scale with zoom
+                marker.setIcon(L.icon({
+                iconUrl: 'images/vanderbilt_anchor.png',
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2],
+                className: 'home-icon'
+                }));
+            });
+        }
+
+        // Initialize the application
+        async function init() {
+            const routesContainer = document.getElementById('routesContainer');
+            
+            // Show loading message
+            routesContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Loading routes...</div>';
+            
+            // Load all GeoJSON routes
+            const loadPromises = routeConfig.map(config => loadGeoJSONRoute(config));
+            routeData = await Promise.all(loadPromises);
+            filteredRoutes = [...routeData];
+            
+            // Clear loading message
+            routesContainer.innerHTML = '';
+            
+            // Populate routes list
+            routeData.forEach(route => {
+                const routeItem = createRouteItem(route);
+                routesContainer.appendChild(routeItem);
+            });
+
+            // Add event listeners
+            routesContainer.addEventListener('change', handleRouteSelection);
+            document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
+            document.getElementById('toggleAllRoutes').addEventListener('click', toggleAllRoutes);
+            
+            // Add filter event listeners
+            document.getElementById('searchBar').addEventListener('input', filterRoutes);
+            document.getElementById('difficultyFilter').addEventListener('change', filterRoutes);
+            document.getElementById('distanceFilter').addEventListener('change', filterRoutes);
+            document.getElementById('elevationFilter').addEventListener('change', filterRoutes);
+            
+            // Handle route item clicks (excluding checkbox)
+            routesContainer.addEventListener('click', function(event) {
+                if (event.target.type !== 'checkbox') {
+                    const routeItem = event.target.closest('.route-item');
+                    if (routeItem) {
+                        const checkbox = routeItem.querySelector('.route-checkbox');
+                        if (!checkbox.disabled) {
+                            checkbox.checked = !checkbox.checked;
+                            
+                            // Trigger the change event
+                            const changeEvent = new Event('change', { bubbles: true });
+                            checkbox.dispatchEvent(changeEvent);
+                        }
+                    }
+                }
+            });
+            
+            // Initial filter update
+            filterRoutes();
+            
+            // Auto-fit map to show all loaded routes if any exist
+            const loadedRoutes = routeData.filter(route => route.loaded);
+            if (loadedRoutes.length > 0) {
+                const allCoordinates = loadedRoutes.flatMap(route => route.coordinates);
+                if (allCoordinates.length > 0) {
+                    const group = new L.featureGroup(loadedRoutes.map(route => 
+                        L.polyline(route.coordinates, { weight: 0, opacity: 0 })
+                    ));
+                    map.fitBounds(group.getBounds(), { padding: [50, 50] });
+                }
+            }
+        }
+
+        addHomePoint();
+
+        // Randomized button label
+        function chooseRandomButtonLabel() {
+            const options = [
+                { text: "Go 'Dores!", weight: 20 },
+                { text: "Anchor Down!", weight: 20 },
+                { text: "Conquer & Prevail!", weight: 20 },
+                { text: "Go Anchors!", weight: 10 },
+                { text: "Vanderbilt! (Over here!)", weight: 5 },
+                { text: "RIP David Williams", weight: 5 },
+                { text: "VANDY WE FUCKIN TURNT", weight: 5 },
+                { text: "I'm so stoked to see Rufus", weight: 5 },
+                { text: "Anyone at Rand or Grins?", weight: 5 },
+                { text: "Please be nice to Sto", weight: 5 },
+            ];
+
+            const totalWeight = options.reduce((sum, o) => sum + o.weight, 0);
+            const rand = Math.random() * totalWeight;
+
+            let cumWeight = 0;
+            for (const option of options) {
+                cumWeight += option.weight;
+                if (rand < cumWeight) return option.text;
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const splashBtn = document.getElementById('dismissSplash');
+            if (splashBtn) splashBtn.textContent = chooseRandomButtonLabel();
+        });
+
+        // Handle window resize to maintain map bounds
+        window.addEventListener('resize', function() {
+            map.invalidateSize();
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Splash screen event listener
+        document.getElementById('dismissSplash').addEventListener('click', function () {
+            document.getElementById('splashOverlay').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
